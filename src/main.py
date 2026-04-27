@@ -101,6 +101,8 @@ from data.generate_random_examples import generate_random_maxsat_instance
 # print("Chosen method:", chosen_method)
 # print("Ratio best/LP:", best_value / lp_value if lp_value > 0 else 0.0)
 
+
+# Testing with randomly generated examples
 instance = generate_random_maxsat_instance(
     num_vars=200,
     num_clauses=500,
