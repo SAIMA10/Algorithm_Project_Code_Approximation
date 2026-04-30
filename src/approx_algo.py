@@ -11,11 +11,6 @@ def three_quarter_approximation(instance: MaxSATInstance) -> Tuple[List[bool], f
     """
     Run Johnson's algorithm and LP-rounding algorithm,
     evaluate both assignments, and return the better one.
-
-    Returns:
-        best_assignment: the chosen Boolean assignment
-        best_value: total satisfied weight of that assignment
-        method_name: which method was chosen ("johnson" or "lp_rounding")
     """
     y_star, z_star, lp_value = solve_lp_relaxation(instance)
 
