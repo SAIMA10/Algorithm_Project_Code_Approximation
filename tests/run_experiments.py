@@ -1,21 +1,10 @@
 """
-Running the experiment for the 3/4-approximation MAX SAT algorithm
+Running the experiment for the 3/4-approximation MAX SAT algorithm as per requirements.
 Grid: num_vars in {100,200,300,400,500} x num_clauses in {100,200,300,400,500}.
 Averaged over NUM_SEEDS random instances per cell.
-
-The central call is three_quarter_approximation() from approx_algo.py — the actual
-3/4 algorithm.  Johnson and LP-rounding are also run individually so their ratios
-can be compared on the same plots.
-
-Note on ratio = 1.0:
-  With sparse random instances (vars >> clauses or short clauses, uniform polarity),
-  the LP can satisfy every clause by setting unconstrained variables greedily, so
-  Z*_LP = total_weight and both algorithms trivially match it.  Non-trivial LP gaps
-  emerge when the same variable is forced into conflicting polarities across many
-  clauses, which we induce here by using max_clause_len=3 and varied clause densities.
 """
 
-import sys, json, random
+import json, random
 
 import matplotlib
 matplotlib.use("Agg")
@@ -27,10 +16,7 @@ from src.lp_solver import solve_lp_relaxation
 from src.johnson import johnson_assignment
 from src.lp_rounding import lp_rounding_assignment
 from src.evaluation import evaluate_assignment
-from src.approx_algo import three_quarter_approximation   # ← the actual 3/4 algorithm
-
-
-# ── instance generator ────────────────────────────────────────────────────────
+from src.approx_algo import three_quarter_approximation  
 
 def generate_instance(num_vars, num_clauses, max_clause_len=3, seed=0):
     rng = random.Random(seed)
@@ -45,31 +31,19 @@ def generate_instance(num_vars, num_clauses, max_clause_len=3, seed=0):
     return MaxSATInstance(num_vars=num_vars, clauses=clauses)
 
 
-# ── single-instance runner ────────────────────────────────────────────────────
-
 def run_one(instance):
     """
     Run all three algorithms on one instance.
-
-    three_quarter_approximation() is the 3/4 algorithm from approx_algo.py.
-    It internally solves the LP, runs both sub-algorithms, and returns the better one.
-    We also run Johnson and LP-rounding individually (reusing the LP solve) so
-    we can compare all three on the same plots.
-
     Returns: (lp_val, johnson_val, lp_round_val, best_val, method_chosen)
     """
-    # ── 3/4 algorithm — the main algorithm under study ────────────────────────
     best_assign, best_val, method, lp_val = three_quarter_approximation(instance)
 
-    # ── individual sub-algorithms (reuse LP solve already done above) ─────────
     y_star, _, _ = solve_lp_relaxation(instance)
     j_val  = evaluate_assignment(instance, johnson_assignment(instance))
     lr_val = evaluate_assignment(instance, lp_rounding_assignment(instance, y_star=y_star))
 
     return lp_val, j_val, lr_val, best_assign, best_val, method
 
-
-# ── grid experiment ───────────────────────────────────────────────────────────
 
 VAR_SIZES    = [100, 200, 300, 400, 500]
 CLAUSE_SIZES = [100, 200, 300, 400, 500]
@@ -106,8 +80,6 @@ for nv in VAR_SIZES:
         best_ratio  = avg_best / avg_lp
         pct_johnson = method_list.count("johnson") / NUM_SEEDS * 100
 
-        # final combined algorithm selected Johnson over LP-rounding. That is a nice extra statistic.
-
         rec = dict(vars=nv, clauses=nc,
                    avg_lp=avg_lp, avg_j=avg_j, avg_lr=avg_lr, avg_best=avg_best,
                    j_ratio=j_ratio, lr_ratio=lr_ratio, best_ratio=best_ratio,
@@ -123,7 +95,6 @@ with open("results.json", "w") as f:
 print("\nResults saved to results.json")
 
 
-# ── helpers for plotting ──────────────────────────────────────────────────────
 
 def get_matrix(records, key):
     M = np.zeros((len(VAR_SIZES), len(CLAUSE_SIZES)))
@@ -132,15 +103,11 @@ def get_matrix(records, key):
         j = CLAUSE_SIZES.index(r["clauses"])
         M[i, j] = r[key]
     return M
-    # This helper function converts the list of result dictionaries into a matrix indexed by:
-    # row = number of variables
-    # column = number of clauses
-    # That is useful for line plots and heatmaps.
 
 COLORS = {"johnson": "#2563EB", "lp_round": "#DC2626", "best": "#16A34A"}
 
 
-# ── Plot 1: ratio vs num_clauses, one line per num_vars ──────────────────────
+# Plot 1: ratio vs num_clauses, one line per num_vars
 fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
 fig.suptitle(
     "Approximation Ratio (algorithm value / LP optimum) vs Number of Clauses\n"
@@ -168,7 +135,7 @@ plt.close()
 print("Saved plot1_ratio_vs_clauses.png")
 
 
-# ── Plot 2: ratio vs num_vars, one line per num_clauses ──────────────────────
+#Plot 2: ratio vs num_vars, one line per num_clauses
 fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
 fig.suptitle(
     "Approximation Ratio (algorithm value / LP optimum) vs Number of Variables\n"
@@ -196,34 +163,7 @@ plt.close()
 print("Saved plot2_ratio_vs_vars.png")
 
 
-# ── Plot 3: heatmaps ──────────────────────────────────────────────────────────
-fig, axes = plt.subplots(1, 3, figsize=(18, 5))
-fig.suptitle(
-    f"Approximation Ratio Heatmaps  (value / LP optimum)  —  averaged over {NUM_SEEDS} seeds",
-    fontsize=11)
-
-for ax, key, label in zip(
-        axes,
-        ["best_ratio", "j_ratio",  "lr_ratio"],
-        ["3/4 Algorithm (best of both)", "Johnson", "LP Rounding"]):
-    M = get_matrix(records, key)
-    im = ax.imshow(M, vmin=0.90, vmax=1.0, cmap="RdYlGn", origin="lower", aspect="auto")
-    ax.set_xticks(range(len(CLAUSE_SIZES))); ax.set_xticklabels(CLAUSE_SIZES)
-    ax.set_yticks(range(len(VAR_SIZES)));   ax.set_yticklabels(VAR_SIZES)
-    ax.set_xlabel("Number of Clauses"); ax.set_ylabel("Number of Variables")
-    ax.set_title(label, fontsize=10)
-    for i in range(len(VAR_SIZES)):
-        for j in range(len(CLAUSE_SIZES)):
-            ax.text(j, i, f"{M[i,j]:.3f}", ha="center", va="center", fontsize=8)
-    plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    # Each cell shows the average ratio for a specific (vars,clauses) pair.
-plt.tight_layout()
-plt.savefig("plot3_heatmap.png", dpi=150, bbox_inches="tight")
-plt.close()
-print("Saved plot3_heatmap.png")
-
-
-# ── Plot 4: all three algorithms on one axis for vars=100 ────────────────────
+# Plot 4: all three algorithms on one axis for vars=100
 # change the variable number to plot for different variable plot 
 fig, ax = plt.subplots(figsize=(8, 5))
 ax.set_title(
@@ -250,7 +190,7 @@ plt.close()
 print("Saved plot4_comparison_vars100.png")
 
 
-# ── Plot 5: % of times Johnson wins ──────────────────────────────────────────
+# Plot 5: % of times Johnson wins
 fig, ax = plt.subplots(figsize=(8, 5))
 ax.set_title(
     "% of Instances Where 3/4 Algorithm Chose Johnson over LP-Rounding\n"
@@ -268,6 +208,31 @@ plt.tight_layout()
 plt.savefig("plot5_johnson_win_rate.png", dpi=150, bbox_inches="tight")
 plt.close()
 print("Saved plot5_johnson_win_rate.png")
-# diagnostic plot because it tells you which sub-algorithm is dominating in different regions of the parameter space.
 
-print("\nAll done.")
+
+# Other plots:
+# # Plot 3: heatmaps
+# fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+# fig.suptitle(
+#     f"Approximation Ratio Heatmaps  (value / LP optimum)  —  averaged over {NUM_SEEDS} seeds",
+#     fontsize=11)
+
+# for ax, key, label in zip(
+#         axes,
+#         ["best_ratio", "j_ratio",  "lr_ratio"],
+#         ["3/4 Algorithm (best of both)", "Johnson", "LP Rounding"]):
+#     M = get_matrix(records, key)
+#     im = ax.imshow(M, vmin=0.90, vmax=1.0, cmap="RdYlGn", origin="lower", aspect="auto")
+#     ax.set_xticks(range(len(CLAUSE_SIZES))); ax.set_xticklabels(CLAUSE_SIZES)
+#     ax.set_yticks(range(len(VAR_SIZES)));   ax.set_yticklabels(VAR_SIZES)
+#     ax.set_xlabel("Number of Clauses"); ax.set_ylabel("Number of Variables")
+#     ax.set_title(label, fontsize=10)
+#     for i in range(len(VAR_SIZES)):
+#         for j in range(len(CLAUSE_SIZES)):
+#             ax.text(j, i, f"{M[i,j]:.3f}", ha="center", va="center", fontsize=8)
+#     plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+#     # Each cell shows the average ratio for a specific (vars,clauses) pair.
+# plt.tight_layout()
+# plt.savefig("plot3_heatmap.png", dpi=150, bbox_inches="tight")
+# plt.close()
+# print("Saved plot3_heatmap.png")

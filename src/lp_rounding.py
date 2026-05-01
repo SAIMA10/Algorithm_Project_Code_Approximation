@@ -1,4 +1,3 @@
-# LP-based deterministic rounding via conditional probabilities with pi = yi*
 from typing import List, Optional
 from src.data_structures import MaxSATInstance
 from src.conditional_expectation import conditional_expected_value
@@ -10,9 +9,6 @@ def lp_rounding_assignment(
     y_star: List[float] | None = None,
 ) -> List[bool]:
     """
-    Construct a deterministic assignment using LP-based rounding
-    via the method of conditional probabilities.
-
     The LP relaxation is solved first to obtain y*.
     Then variables are fixed one by one, choosing the value
     that maximizes the conditional expected total satisfied weight.

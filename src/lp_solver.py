@@ -1,8 +1,4 @@
-'''
-LP construction
-LP solving
-returning y*, z*
-'''
+
 from typing import List, Tuple
 import pulp
 from src.data_structures import MaxSATInstance
@@ -10,11 +6,10 @@ from src.data_structures import MaxSATInstance
 def solve_lp_relaxation(instance: MaxSATInstance) -> Tuple[List[float], List[float], float]:
     """
     Solve the LP relaxation of MAX SAT.
-
-    Returns:
-        y_star: fractional values for variable truth assignments
-        z_star: fractional values for clause satisfaction variables
-        lp_value: optimal LP objective value
+    It returns:
+    y_star: fractional values for variable truth assignments
+    z_star: fractional values for clause satisfaction variables
+    lp_value: optimal LP objective value
     """
     n = instance.num_vars
     m = len(instance.clauses)

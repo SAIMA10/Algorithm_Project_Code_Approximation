@@ -1,8 +1,3 @@
-"""
-clause satisfaction probability under partial assignment
-total conditional expected value
-"""
-
 from typing import List, Optional
 from src.data_structures import Clause, MaxSATInstance
 
@@ -48,11 +43,8 @@ def conditional_expected_value(
     probabilities: List[float],
 ) -> float:
     """
-    Return the conditional expected total satisfied weight of the instance,
-    given a partial assignment and probabilities for unassigned variables.
     For each clause it computes the Pr of it being satisfied under the current partial assignment and remaining random choices
     then it adds: wj. Pr(Cj satisfied) over all clauses
-    Main idea of conditional probabilities is to kepe the choive with larger values by comparing the True/False temporary assignment
     """
     total = 0.0
     for clause in instance.clauses:

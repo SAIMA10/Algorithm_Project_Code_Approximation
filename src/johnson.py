@@ -1,19 +1,14 @@
-# Johnson via conditional probabilities with pi=1/2
 from typing import List, Optional
 from src.data_structures import MaxSATInstance
 from src.conditional_expectation import conditional_expected_value
 
 def johnson_assignment(instance: MaxSATInstance) -> List[bool]:
     """
-    Construct a deterministic assignment using Johnson's algorithm,
-    interpreted via the method of conditional probabilities.
-
     Each variable starts with probability 1/2 of being True.
     Variables are then fixed one by one by choosing the value that
     maximizes the conditional expected total satisfied weight.
     """
     probabilities = [0.5] * instance.num_vars
-    # each variable is initially treated like fair coin flip 
     assignment: List[Optional[bool]] = [None] * instance.num_vars
     # starting with variables unassigned
 
